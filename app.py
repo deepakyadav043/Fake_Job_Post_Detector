@@ -40,4 +40,4 @@ def predict(job : job):
         'has_questions' : job.has_questions
     }])
     prob = float(model.predict_proba(row)[0][1])
-    return {"fradulent":int(prob >0.5), 'pobability' : round(prob, 2)}
+    return {"fraudulent":int(prob >0.5), 'probability' : round(prob, 2)}
