@@ -33,7 +33,7 @@ def predict(job : job):
         'text': text,
         'employment_type' : job.employment_type,
         'required_experience' : job.required_experience,
-        'required_eduction' : job.required_education,
+        'required_education' : job.required_education,
         
         'telecommuting' : job.telecommuting,
         'has_company_logo' : job.has_company_logo,
