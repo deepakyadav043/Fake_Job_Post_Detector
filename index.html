@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fake Job Post Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef1f5;
+    --panel: #ffffff;
+    --panel-2: #f6f8fb;
+    --ink: #14213d;
+    --muted: #5b6577;
+    --line: #d5dbe5;
+    --focus: #2b5fd9;
+    --ok: #1f7a4d;
+    --ok-bg: #e3f4ea;
+    --bad: #b3261e;
+    --bad-bg: #fbe7e5;
+    --warn: #a15c00;
+    --warn-bg: #fff1d6;
+    --idle: #8a93a3;
+    --btn: #14213d;
+    --btn-ink: #ffffff;
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0e1522;
+    --panel: #172033;
+    --panel-2: #1d2840;
+    --ink: #e8edf7;
+    --muted: #9aa6bd;
+    --line: #2b3855;
+    --focus: #7ea3ff;
+    --ok: #4fc08a;
+    --ok-bg: #12382a;
+    --bad: #ff7b72;
+    --bad-bg: #3d1b1b;
+    --warn: #f0b24a;
+    --warn-bg: #3a2c10;
+    --idle: #6f7b93;
+    --btn: #e8edf7;
+    --btn-ink: #0e1522;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Public Sans", system-ui, sans-serif;
+    line-height: 1.5;
+    transition: background-color 0.25s, color 0.25s;
+  }
+
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
+
+  /* Header */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding-top: 36px;
+    padding-bottom: 8px;
+  }
+  h1 {
+    font-family: "Bricolage Grotesque", "Public Sans", sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3rem);
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin: 0 0 10px;
+  }
+  header p { margin: 0; color: var(--muted); max-width: 58ch; }
+
+  .icon-btn {
+    flex: none;
+    width: 42px; height: 42px;
+    display: grid; place-items: center;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .icon-btn svg { width: 20px; height: 20px; }
+
+  /* Layout */
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+    padding-top: 20px;
+    padding-bottom: 56px;
+  }
+  .side { position: sticky; top: 20px; display: grid; gap: 18px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px;
+  }
+  .card h2 {
+    margin: 0 0 14px;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  /* Form top bar */
+  .form-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .samples { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .samples span { font-size: 0.85rem; color: var(--muted); }
+  .chip {
+    font: inherit; font-size: 0.85rem; font-weight: 600;
+    background: var(--panel-2);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    cursor: pointer;
+  }
+  .chip:hover { border-color: var(--ink); }
+
+  .complete { margin-bottom: 22px; }
+  .complete-head {
+    display: flex; justify-content: space-between;
+    font-size: 0.8rem; color: var(--muted); margin-bottom: 6px;
+  }
+  .track { height: 6px; background: var(--bg); border-radius: 999px; overflow: hidden; }
+  .track span {
+    display: block; height: 100%; width: 0;
+    background: var(--focus);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+
+  /* Fields */
+  .field { margin-bottom: 18px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  label, .legend { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+  .label-line { display: flex; justify-content: space-between; align-items: baseline; }
+  .hint { font-weight: 400; color: var(--muted); }
+  .count { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  input[type="text"], textarea, select {
+    width: 100%;
+    font: inherit;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    transition: border-color 0.15s;
+  }
+  textarea { resize: vertical; min-height: 96px; }
+  input.invalid, textarea.invalid { border-color: var(--bad); }
+  .field-error { display: none; color: var(--bad); font-size: 0.8rem; margin-top: 4px; }
+  .invalid + .field-error { display: block; }
+
+  input:focus-visible, textarea:focus-visible, select:focus-visible,
+  button:focus-visible, .switch input:focus-visible + .slider {
+    outline: 3px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  /* Switches */
+  .switches { border-top: 1px solid var(--line); }
+  .switch {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .switch b { font-weight: 600; display: block; font-size: 0.92rem; }
+  .switch small { color: var(--muted); }
+  .switch input { position: absolute; opacity: 0; }
+  .slider {
+    flex: none; position: relative;
+    width: 44px; height: 24px;
+    background: var(--line);
+    border-radius: 999px;
+    transition: background-color 0.2s;
+  }
+  .slider::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #fff;
+    transition: transform 0.2s;
+  }
+  .switch input:checked + .slider { background: var(--ok); }
+  .switch input:checked + .slider::after { transform: translateX(20px); }
+
+  /* Buttons */
+  .actions { display: flex; gap: 12px; margin-top: 22px; align-items: center; flex-wrap: wrap; }
+  button { font: inherit; font-weight: 600; border-radius: 8px; padding: 12px 20px; cursor: pointer; }
+  .primary {
+    flex: 1; min-width: 200px;
+    background: var(--btn); color: var(--btn-ink);
+    border: 1px solid var(--btn);
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .primary:disabled { opacity: 0.7; cursor: progress; }
+  .secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .kbd { font-size: 0.78rem; color: var(--muted); }
+
+  .spinner {
+    display: none;
+    width: 16px; height: 16px;
+    border: 2px solid currentColor; border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  .loading .spinner { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Gauge */
+  .gauge { width: 100%; max-width: 320px; margin: 0 auto; display: block; }
+  .gauge .base, .gauge .arc { fill: none; stroke-width: 14; stroke-linecap: round; }
+  .gauge .base { stroke: var(--bg); }
+  .gauge .arc {
+    stroke: var(--idle);
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    transition: stroke-dashoffset 0.9s cubic-bezier(.2,.8,.2,1), stroke 0.3s;
+  }
+  .gauge .tick { stroke: var(--muted); stroke-width: 2; }
+  .gauge .pct { font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 36px; fill: var(--ink); text-anchor: middle; }
+  .gauge .sub { font-size: 10px; fill: var(--muted); text-anchor: middle; }
+
+  .state-real .arc { stroke: var(--ok); }
+  .state-fake .arc { stroke: var(--bad); }
+
+  .verdict {
+    font-family: "Bricolage Grotesque", "Public Sans", sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.7rem, 3.6vw, 2.2rem);
+    line-height: 1.1;
+    margin: 4px 0 6px;
+    text-align: center;
+    color: var(--idle);
+  }
+  .state-real .verdict { color: var(--ok); }
+  .state-fake .verdict { color: var(--bad); }
+  .detail { margin: 0 0 14px; color: var(--muted); text-align: center; font-size: 0.92rem; }
+
+  .band {
+    display: none; width: fit-content; margin: 0 auto 14px;
+    font-size: 0.8rem; font-weight: 700;
+    padding: 4px 12px; border-radius: 999px;
+  }
+  .state-real .band, .state-fake .band { display: block; }
+  .state-real .band { background: var(--ok-bg); color: var(--ok); }
+  .state-fake .band { background: var(--bad-bg); color: var(--bad); }
+
+  .result-actions { display: none; justify-content: center; gap: 10px; }
+  .state-real .result-actions, .state-fake .result-actions { display: flex; }
+  .result-actions .secondary { padding: 8px 14px; font-size: 0.85rem; }
+
+  .error {
+    display: none; margin-top: 14px; padding: 10px 12px;
+    border-radius: 8px; background: var(--bad-bg); color: var(--bad);
+    font-size: 0.88rem;
+  }
+
+  .skeleton .pct, .skeleton .verdict { animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  /* Quick checks */
+  .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .checks li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.9rem; }
+  .dot { flex: none; width: 10px; height: 10px; margin-top: 7px; border-radius: 50%; background: var(--line); }
+  .checks li.flag .dot { background: var(--bad); }
+  .checks li.pass .dot { background: var(--ok); }
+  .checks li.flag { color: var(--ink); }
+  .checks li.idle { color: var(--muted); }
+  .checks small { display: block; color: var(--muted); }
+  .note { margin: 14px 0 0; font-size: 0.78rem; color: var(--muted); }
+
+  /* History */
+  .history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .history button {
+    width: 100%; text-align: left;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 10px 12px; font-weight: 500; font-size: 0.88rem;
+  }
+  .history button:hover { border-color: var(--ink); }
+  .history .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge { flex: none; font-size: 0.78rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+  .badge.real { background: var(--ok-bg); color: var(--ok); }
+  .badge.fake { background: var(--bad-bg); color: var(--bad); }
+  .empty { color: var(--muted); font-size: 0.88rem; margin: 0; }
+  .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .card-head h2 { margin: 0; }
+  .link-btn { background: none; border: 0; color: var(--muted); padding: 0; font-size: 0.8rem; text-decoration: underline; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px);
+    background: var(--btn); color: var(--btn-ink);
+    padding: 10px 18px; border-radius: 999px; font-size: 0.88rem; font-weight: 600;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+    .side { position: static; }
+    .row { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Is this job post real?</h1>
+      <p>Paste a job listing and the model scores how likely it is to be fraudulent. Simple red-flag checks update as you type.</p>
+    </div>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+      </svg>
+    </button>
+  </header>
+
+  <main>
+    <form class="card" id="jobForm" novalidate>
+      <div class="form-top">
+        <div class="samples">
+          <span>Try an example:</span>
+          <button type="button" class="chip" data-sample="suspicious">Suspicious post</button>
+          <button type="button" class="chip" data-sample="genuine">Genuine post</button>
+        </div>
+      </div>
+
+      <div class="complete">
+        <div class="complete-head"><span>Form completeness</span><span id="completeText">0%</span></div>
+        <div class="track"><span id="completeBar"></span></div>
+      </div>
+
+      <div class="field">
+        <label for="title">Job title</label>
+        <input type="text" id="title" autocomplete="off" placeholder="e.g. Data Entry Clerk">
+        <div class="field-error">Please enter a job title.</div>
+      </div>
+
+      <div class="field">
+        <div class="label-line">
+          <label for="company_profile">Company profile <span class="hint">(optional)</span></label>
+          <span class="count" data-count-for="company_profile">0</span>
+        </div>
+        <textarea id="company_profile" placeholder="What the company says about itself"></textarea>
+      </div>
+
+      <div class="field">
+        <div class="label-line">
+          <label for="description">Job description</label>
+          <span class="count" data-count-for="description">0</span>
+        </div>
+        <textarea id="description" placeholder="Responsibilities and details of the role"></textarea>
+        <div class="field-error">Please enter a job description.</div>
+      </div>
+
+      <div class="field">
+        <div class="label-line">
+          <label for="requirements">Requirements <span class="hint">(optional)</span></label>
+          <span class="count" data-count-for="requirements">0</span>
+        </div>
+        <textarea id="requirements" placeholder="Skills, qualifications, experience"></textarea>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="employment_type">Employment type</label>
+          <select id="employment_type">
+            <option value="Unknown">Not specified</option>
+            <option>Full-time</option>
+            <option>Part-time</option>
+            <option>Contract</option>
+            <option>Temporary</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="required_experience">Experience level</label>
+          <select id="required_experience">
+            <option value="Unknown">Not specified</option>
+            <option>Internship</option>
+            <option>Entry level</option>
+            <option>Associate</option>
+            <option>Mid-Senior level</option>
+            <option>Director</option>
+            <option>Executive</option>
+            <option>Not Applicable</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="required_education">Education required</label>
+        <select id="required_education">
+          <option value="Unknown">Not specified</option>
+          <option>High School or equivalent</option>
+          <option>Some College Coursework Completed</option>
+          <option>Vocational</option>
+          <option>Certification</option>
+          <option>Associate Degree</option>
+          <option>Bachelor's Degree</option>
+          <option>Master's Degree</option>
+          <option>Professional</option>
+          <option>Doctorate</option>
+          <option>Unspecified</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <span class="legend">About the listing</span>
+        <div class="switches">
+          <label class="switch">
+            <span><b>Remote work allowed</b><small>Telecommuting is offered</small></span>
+            <input type="checkbox" id="telecommuting"><span class="slider"></span>
+          </label>
+          <label class="switch">
+            <span><b>Has a company logo</b><small>The posting shows a logo</small></span>
+            <input type="checkbox" id="has_company_logo"><span class="slider"></span>
+          </label>
+          <label class="switch">
+            <span><b>Includes screening questions</b><small>Applicants answer questions</small></span>
+            <input type="checkbox" id="has_questions"><span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="primary" id="submitBtn">
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="submitLabel">Check this job post</span>
+        </button>
+        <button type="button" class="secondary" id="resetBtn">Clear</button>
+        <span class="kbd">Ctrl + Enter</span>
+      </div>
+    </form>
+
+    <aside class="side">
+      <section class="card state-idle" id="result" aria-live="polite">
+        <h2>Model result</h2>
+        <svg class="gauge" viewBox="0 0 200 124" role="img" aria-label="Fraud probability gauge">
+          <path class="base" pathLength="100" d="M 15 105 A 85 85 0 0 1 185 105"/>
+          <path class="arc" id="arc" pathLength="100" d="M 15 105 A 85 85 0 0 1 185 105"/>
+          <line class="tick" x1="100" y1="8" x2="100" y2="30"/>
+          <text class="pct" id="pctText" x="100" y="92">--</text>
+          <text class="sub" x="100" y="112">chance of being fraudulent</text>
+        </svg>
+        <p class="verdict" id="verdict">No result yet</p>
+        <div class="band" id="band"></div>
+        <p class="detail" id="detail">Fill in the form and check the post to see a score.</p>
+        <div class="result-actions">
+          <button type="button" class="secondary" id="copyBtn">Copy summary</button>
+        </div>
+        <div class="error" id="error"></div>
+      </section>
+
+      <section class="card">
+        <h2>Quick red-flag checks</h2>
+        <ul class="checks" id="checks"></ul>
+        <p class="note">These are simple pattern checks on your text. They are separate from the model's score and can be wrong.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Recent checks</h2>
+          <button type="button" class="link-btn" id="clearHistory">Clear</button>
+        </div>
+        <ul class="history" id="history"></ul>
+        <p class="empty" id="historyEmpty">Your checks will appear here.</p>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  const $ = (sel) => document.querySelector(sel);
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const TEXT_IDS = ["title", "company_profile", "description", "requirements"];
+  const SELECT_IDS = ["employment_type", "required_experience", "required_education"];
+  const FLAG_IDS = ["telecommuting", "has_company_logo", "has_questions"];
+
+  const form = $("#jobForm");
+  const resultCard = $("#result");
+  const submitBtn = $("#submitBtn");
+
+  /* ---------- safe storage ---------- */
+  const store = {
+    get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+    set(key, val) { try { localStorage.setItem(key, val); } catch {} },
+  };
+
+  /* ---------- theme ---------- */
+  function applyTheme(theme) { document.documentElement.setAttribute("data-theme", theme); }
+  applyTheme(store.get("theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+  $("#themeBtn").addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(next);
+    store.set("theme", next);
+  });
+
+  /* ---------- toast ---------- */
+  let toastTimer;
+  function toast(msg) {
+    const el = $("#toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 2000);
+  }
+
+  /* ---------- form helpers ---------- */
+  const val = (id) => document.getElementById(id).value.trim();
+  const flag = (id) => (document.getElementById(id).checked ? 1 : 0);
+
+  function getPayload() {
+    return {
+      title: val("title"),
+      company_profile: val("company_profile"),
+      description: val("description"),
+      requirements: val("requirements"),
+      employment_type: val("employment_type"),
+      required_experience: val("required_experience"),
+      required_education: val("required_education"),
+      telecommuting: flag("telecommuting"),
+      has_company_logo: flag("has_company_logo"),
+      has_questions: flag("has_questions"),
+    };
+  }
+
+  function fillForm(p) {
+    TEXT_IDS.forEach((id) => (document.getElementById(id).value = p[id] || ""));
+    SELECT_IDS.forEach((id) => (document.getElementById(id).value = p[id] || "Unknown"));
+    FLAG_IDS.forEach((id) => (document.getElementById(id).checked = !!p[id]));
+    refreshLive();
+  }
+
+  /* ---------- live: counters, completeness, quick checks ---------- */
+  function updateCounters() {
+    document.querySelectorAll("[data-count-for]").forEach((el) => {
+      const n = document.getElementById(el.dataset.countFor).value.length;
+      el.textContent = n.toLocaleString() + " chars";
+    });
+  }
+
+  function updateCompleteness() {
+    let filled = 0;
+    TEXT_IDS.forEach((id) => { if (val(id)) filled++; });
+    SELECT_IDS.forEach((id) => { if (val(id) !== "Unknown") filled++; });
+    const pct = Math.round((filled / (TEXT_IDS.length + SELECT_IDS.length)) * 100);
+    $("#completeBar").style.width = pct + "%";
+    $("#completeText").textContent = pct + "%";
+  }
+
+  const RULES = [
+    {
+      name: "Asks for money or fees",
+      hint: "Registration, training or security fees, wire transfers, gift cards",
+      test: (t) => /(registration|training|security|processing|application)\s*(fee|deposit|charge)|wire transfer|western union|gift card|send (us )?money|pay (a|the) fee/i.test(t),
+    },
+    {
+      name: "Contact through personal email or chat apps",
+      hint: "Gmail/Yahoo addresses, WhatsApp or Telegram",
+      test: (t) => /@(gmail|yahoo|outlook|hotmail|rediffmail)\.|whatsapp|telegram|signal app/i.test(t),
+    },
+    {
+      name: "Unrealistic pay or effort claims",
+      hint: "Fixed daily earnings, guaranteed income, no experience needed",
+      test: (t) => /(earn|make)\s*(up to\s*)?[$₹€£]?\s*\d[\d,]*\s*(\/|per|a)\s*(day|week|hour)|guaranteed (income|salary|job)|no experience (is )?(needed|required)|no skills? (needed|required)/i.test(t),
+    },
+    {
+      name: "Pressure to act fast",
+      hint: "Urgent, apply immediately, limited slots",
+      test: (t) => /\burgent(ly)?\b|apply (now|immediately|today)|limited (slots|seats|positions|vacancies)|immediate(ly)? (joining|hiring|start)/i.test(t),
+    },
+  ];
+
+  function updateChecks() {
+    const all = TEXT_IDS.map(val).join(" \n ");
+    const anyText = all.replace(/\s/g, "").length > 0;
+    const desc = val("description");
+    const items = [];
+
+    RULES.forEach((r) => {
+      if (!anyText) items.push({ cls: "idle", name: r.name, hint: r.hint });
+      else if (r.test(all)) items.push({ cls: "flag", name: r.name, hint: "Found in the text: " + r.hint.toLowerCase() });
+      else items.push({ cls: "pass", name: r.name, hint: "" });
+    });
+
+    // structure checks
+    if (!anyText) {
+      items.push({ cls: "idle", name: "Description has enough detail", hint: "" });
+      items.push({ cls: "idle", name: "Company details provided", hint: "" });
+    } else {
+      items.push(desc.length >= 150
+        ? { cls: "pass", name: "Description has enough detail", hint: "" }
+        : { cls: "flag", name: "Description is very short", hint: "Real postings usually describe the role in some detail" });
+      items.push(val("company_profile") && flag("has_company_logo")
+        ? { cls: "pass", name: "Company details provided", hint: "" }
+        : { cls: "flag", name: "Little company information", hint: "No company profile or no logo" });
+    }
+
+    $("#checks").innerHTML = "";
+    items.forEach((it) => {
+      const li = document.createElement("li");
+      li.className = it.cls;
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      const body = document.createElement("span");
+      body.textContent = it.name;
+      if (it.hint) {
+        const s = document.createElement("small");
+        s.textContent = it.hint;
+        body.appendChild(s);
+      }
+      li.append(dot, body);
+      $("#checks").appendChild(li);
+    });
+  }
+
+  function refreshLive() { updateCounters(); updateCompleteness(); updateChecks(); }
+
+  form.addEventListener("input", (e) => {
+    if (e.target.classList.contains("invalid")) e.target.classList.remove("invalid");
+    refreshLive();
+  });
+  form.addEventListener("change", refreshLive);
+
+  /* ---------- gauge ---------- */
+  let shownPct = 0;
+  function animateGauge(target) {
+    $("#arc").style.strokeDashoffset = 100 - target;
+    const from = shownPct;
+    const start = performance.now();
+    const dur = reduceMotion ? 0 : 900;
+    function tick(now) {
+      const t = dur ? Math.min((now - start) / dur, 1) : 1;
+      const eased = 1 - Math.pow(1 - t, 3);
+      $("#pctText").textContent = Math.round(from + (target - from) * eased) + "%";
+      if (t < 1) requestAnimationFrame(tick);
+      else shownPct = target;
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function riskBand(p) {
+    if (p < 25) return "Low risk";
+    if (p < 50) return "Some risk";
+    if (p < 75) return "High risk";
+    return "Very high risk";
+  }
+
+  function setState(state) {
+    resultCard.classList.remove("state-idle", "state-real", "state-fake", "skeleton");
+    resultCard.classList.add(state);
+  }
+
+  function showError(msg) {
+    const el = $("#error");
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+
+  function resetResult() {
+    setState("state-idle");
+    $("#verdict").textContent = "No result yet";
+    $("#detail").textContent = "Fill in the form and check the post to see a score.";
+    $("#band").textContent = "";
+    $("#error").style.display = "none";
+    $("#arc").style.strokeDashoffset = 100;
+    $("#pctText").textContent = "--";
+    shownPct = 0;
+  }
+
+  /* ---------- history ---------- */
+  const HISTORY_KEY = "fjd_history";
+  let history = [];
+  try { history = JSON.parse(store.get(HISTORY_KEY) || "[]"); } catch { history = []; }
+
+  function renderHistory() {
+    const list = $("#history");
+    list.innerHTML = "";
+    $("#historyEmpty").style.display = history.length ? "none" : "block";
+    history.forEach((h) => {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.title = "Load this post back into the form";
+      const t = document.createElement("span");
+      t.className = "t";
+      t.textContent = h.payload.title || "(untitled)";
+      const b = document.createElement("span");
+      b.className = "badge " + (h.fake ? "fake" : "real");
+      b.textContent = h.pct + "%";
+      btn.append(t, b);
+      btn.addEventListener("click", () => { fillForm(h.payload); window.scrollTo({ top: 0, behavior: "smooth" }); });
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  function addHistory(payload, pct, fake) {
+    history.unshift({ payload, pct, fake });
+    history = history.slice(0, 8);
+    store.set(HISTORY_KEY, JSON.stringify(history));
+    renderHistory();
+  }
+
+  $("#clearHistory").addEventListener("click", () => {
+    history = [];
+    store.set(HISTORY_KEY, "[]");
+    renderHistory();
+  });
+
+  /* ---------- submit ---------- */
+  let lastSummary = "";
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("#error").style.display = "none";
+
+    const missing = [];
+    ["title", "description"].forEach((id) => {
+      const el = document.getElementById(id);
+      const bad = !val(id);
+      el.classList.toggle("invalid", bad);
+      if (bad) missing.push(el);
+    });
+    if (missing.length) { missing[0].focus(); return; }
+
+    const payload = getPayload();
+    submitBtn.disabled = true;
+    submitBtn.classList.add("loading");
+    $("#submitLabel").textContent = "Checking…";
+    resultCard.classList.add("skeleton");
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+
+    try {
+      const res = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error("Server returned " + res.status + ". " + text.slice(0, 160));
+      }
+
+      const data = await res.json();
+      const prob = Number(data.probability);
+      const pct = Math.round(prob * 100);
+      const fake = Number(data.fraudulent) === 1;
+
+      setState(fake ? "state-fake" : "state-real");
+      $("#verdict").textContent = fake ? "Likely fake" : "Looks genuine";
+      $("#band").textContent = riskBand(pct);
+      $("#detail").textContent = "The model gives this post a " + pct + "% chance of being fraudulent. The decision threshold is 50%.";
+      animateGauge(pct);
+
+      lastSummary = "Job post: " + (payload.title || "(untitled)") + "\nResult: " + (fake ? "Likely fake" : "Looks genuine") +
+        " (" + pct + "% fraud probability, " + riskBand(pct).toLowerCase() + ")";
+      addHistory(payload, pct, fake);
+
+      if (window.innerWidth <= 900) resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      resultCard.classList.remove("skeleton");
+      const msg = err.name === "AbortError"
+        ? "The request took too long. Check that the API is running and try again."
+        : "Could not get a prediction. Make sure uvicorn is running. " + err.message;
+      showError(msg);
+    } finally {
+      clearTimeout(timer);
+      resultCard.classList.remove("skeleton");
+      submitBtn.disabled = false;
+      submitBtn.classList.remove("loading");
+      $("#submitLabel").textContent = "Check this job post";
+    }
+  });
+
+  /* ---------- buttons & shortcuts ---------- */
+  $("#resetBtn").addEventListener("click", () => {
+    form.reset();
+    form.querySelectorAll(".invalid").forEach((el) => el.classList.remove("invalid"));
+    resetResult();
+    refreshLive();
+  });
+
+  $("#copyBtn").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(lastSummary);
+      toast("Summary copied");
+    } catch {
+      toast("Could not copy");
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  /* ---------- sample posts ---------- */
+  const SAMPLES = {
+    suspicious: {
+      title: "Work From Home Data Entry - Earn $500 Per Day",
+      company_profile: "",
+      description: "URGENT hiring! No experience needed. Earn $500 per day typing from home, guaranteed income. Pay a small registration fee of $50 to receive your starter kit. Contact us on WhatsApp to apply now. Limited slots available.",
+      requirements: "Laptop and internet. Send your details to hr.jobs2024@gmail.com",
+      employment_type: "Part-time",
+      required_experience: "Not Applicable",
+      required_education: "Unknown",
+      telecommuting: 1, has_company_logo: 0, has_questions: 0,
+    },
+    genuine: {
+      title: "Software Engineer, Backend",
+      company_profile: "We build logistics software used by over 2,000 warehouses across Europe. Our engineering team of 60 works in small cross-functional squads and ships weekly.",
+      description: "You will design and maintain REST services that process shipment events, work with product managers on new features, review code, and help improve our deployment pipeline. You will join a team of six engineers and report to the engineering manager. We offer a structured onboarding plan, a learning budget, and hybrid working from our Berlin office.",
+      requirements: "3+ years of professional experience with Python or Java, solid knowledge of SQL databases, experience with automated testing, and good written communication.",
+      employment_type: "Full-time",
+      required_experience: "Mid-Senior level",
+      required_education: "Bachelor's Degree",
+      telecommuting: 0, has_company_logo: 1, has_questions: 1,
+    },
+  };
+
+  document.querySelectorAll("[data-sample]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      fillForm(SAMPLES[btn.dataset.sample]);
+      resetResult();
+      toast("Example loaded. Press Check this job post");
+    });
+  });
+
+  /* ---------- init ---------- */
+  renderHistory();
+  refreshLive();
+})();
+</script>
+</body>
+</html>
